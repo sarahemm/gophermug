@@ -1,0 +1,55 @@
+#!/usr/bin/ruby
+
+require 'yaml'
+require 'ruby-smugmug'
+
+CFG_PATH = "/etc/gophermug.yaml"
+
+cfg = YAML.load_file(CFG_PATH)
+smugmug = SmugMug::Client.new(
+	:api_key => cfg['auth']['key'],
+	:oauth_secret => cfg['auth']['secret'],
+	:user => {
+		:token => cfg['auth']['oauth_token'],
+		:secret => cfg['auth']['oauth_secret']
+	}
+)
+
+query_string = ENV['QUERY_STRING']
+this_host = ENV['SERVER_HOST']
+this_port = ENV['SERVER_PORT']
+selector = ENV['SELECTOR']
+
+if(query_string == "") then
+  # generate a list of all the categories
+	smugmug.categories.get.each do |cat|
+	  next if cfg['hide_categories'].include? cat['Name']
+  	puts "1#{cat['Name']}\t#{selector}?#{cat['id']}\t#{this_host}\t#{this_port}"
+	end
+	Kernel.exit 0
+end
+
+(cat_string, album_id, album_key, photo_string) = /^(\d+)\/?(\d+)?-?([^\/]+)?\/?([^\/]+)?$/.match(query_string).captures
+if(!album_id) then
+  # generate a list of albums in this category
+	smugmug.albums.get.each do |album|
+ 	 	next if album['Category']['id'] != cat_string.to_i
+  	puts "1#{album['Title']}\t#{selector}/#{album['id']}-#{album['Key']}\t#{this_host}\t#{this_port}"
+  end
+	Kernel.exit 0
+end
+
+if(!photo_string) then
+  # generate a list of the photos in this album
+  smugmug.images.get(:AlbumID => album_id, :AlbumKey => album_key)['Images'].each do |photo|
+	  photo_info = smugmug.images.getInfo(:ImageKey => photo['Key'])
+		description = (photo_info['Caption'] == "" ? photo_info['FileName'] : photo_info['Caption'])
+		puts "I#{description}\t#{selector}/#{photo['Key']}\t#{this_host}\t#{this_port}"
+	end
+  Kernel.exit 0
+end
+
+photo_info = smugmug.images.getInfo(:ImageKey => photo_string)
+url = photo_info['LargeURL']
+print Net::HTTP.get(URI(url))
+

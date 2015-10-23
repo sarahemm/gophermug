@@ -1,0 +1,5 @@
+auth: 
+  secret: [api secret]
+  key: [api key]
+hide_categories:
+  - DontShowThisCategoryName

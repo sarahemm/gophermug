@@ -1,0 +1,36 @@
+#!/usr/bin/ruby
+
+require 'yaml'
+require 'oauth'
+
+CFG_PATH = "/etc/gophermug.yaml"
+
+cfg = YAML.load_file(CFG_PATH)
+if(cfg['auth']['oauth_token']) then
+  puts "Already authorized. If re-authorization is required, remove old credentials from config.yaml first."
+  Kernel.exit(1)
+end
+puts "Requesting token..."
+consumer = OAuth::Consumer.new(
+	cfg['auth']['key'],
+	cfg['auth']['secret'],
+	{
+		:site => "https://api.smugmug.com",
+		:request_token_path => "/services/oauth/1.0a/getRequestToken",
+		:access_token_path => "/services/oauth/1.0a/getAccessToken",
+		:authorize_path => "/services/oauth/1.0a/authorize"
+	}
+)
+request_token = consumer.get_request_token()
+puts "Visit this URL now to authorize: #{request_token.authorize_url}"
+print "Enter authorization PIN: "
+pin = gets.strip.to_i
+puts "Requesting access token using PIN '#{pin}'"
+access_token = request_token.get_access_token :oauth_verifier => pin
+puts "Got token, writing config..."
+cfg['auth']['oauth_token'] = access_token.params['oauth_token']
+cfg['auth']['oauth_secret'] = access_token.params['oauth_token_secret']
+File.open(CFG_PATH, 'w') do |cfgfile|
+  cfgfile.write cfg.to_yaml
+end
+puts "Done."
