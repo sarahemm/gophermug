@@ -25,6 +25,7 @@ if(query_string == "") then
 	smugmug.categories.get.each do |cat|
 	  next if cfg['hide_categories'].include? cat['Name']
   	puts "1#{cat['Name']}\t#{selector}?#{cat['id']}\t#{this_host}\t#{this_port}"
+		$stdout.flush
 	end
 	Kernel.exit 0
 end
@@ -35,6 +36,7 @@ if(!album_id) then
 	smugmug.albums.get.each do |album|
  	 	next if album['Category']['id'] != cat_string.to_i
   	puts "1#{album['Title']}\t#{selector}/#{album['id']}-#{album['Key']}\t#{this_host}\t#{this_port}"
+		$stdout.flush
   end
 	Kernel.exit 0
 end
@@ -45,6 +47,7 @@ if(!photo_string) then
 	  photo_info = smugmug.images.getInfo(:ImageKey => photo['Key'])
 		description = (photo_info['Caption'] == "" ? photo_info['FileName'] : photo_info['Caption'])
 		puts "I#{description}\t#{selector}/#{photo['Key']}\t#{this_host}\t#{this_port}"
+		$stdout.flush
 	end
   Kernel.exit 0
 end
